@@ -6,10 +6,10 @@ require 'pry'
   The word is so many letters long. For each letter, we need to check that each column forms
   a coherent word
 =end
-def check_word_square(wordSquare, dictionary)
+def check_word_square(wordSquare, dictionary, depth)
   for i in 0...wordSquare[0].size
     stringToCheck = String.new
-    for j in 0...wordSquare.size
+    for j in 0..depth
       stringToCheck << wordSquare[j][i]
     end
 
@@ -29,7 +29,7 @@ dictionaryTrie = Trie.new
 
 #4 Tries for each word in the square
 trieArray = Array.new
-for i in 0...$WORD_LENGTH-1
+for i in 0...$WORD_LENGTH
   trieArray.push(Trie.new)
 end
 
@@ -37,80 +37,70 @@ end
 dictionaryFile.each_line do |word|
   word = word.strip()
   dictionaryTrie.insert(word.dup)
-  for i in 0...$WORD_LENGTH-1
+  for i in 0...$WORD_LENGTH
     trieArray[i].insert(word.dup)
   end
 end
 
-=begin
-puts dictionaryTrie.member("mind")
-for i in 0...$WORD_LENGTH-1
-  puts trieArray[i].member("mind")
+for i in 0...$WORD_LENGTH
+  trieArray[i].check_partial("mi")
 end
-=end
 
-stringArray = Array.new
+# We keep track of which words need to be changed in our square. The first word is locked
+changeWord = Array.new($WORD_LENGTH, true)
+changeWord[0] = false
+wordSquare = Array.new($WORD_LENGTH)
+validWordSquare = false
+
 puts "Enter a 4 letter word"
-stringArray.push(gets.chomp)
+wordSquare[0] = gets.chomp
 
-#binding.pry
+
 
 =begin
-  How to effectively add 3 words to the word square?
-  
-  Try to get the 1st word:
-  look through the trie
-  Check that it might work
-  Found one that might work, try to move on:
-    Loop for the second word (similar to 1st loop)
-  We exited the loop and don't have a good square yet, go again
+A while loop that goes on until we exhaust all possible combinations, and are forced to change
+the first word
 
-  FOR LOOP?
-    While the word square is not valid
-      Get the next word, check that it's not boolean false
-      put that word into the square
-      check the square
-      remove the word if it does not create a valid square, move on otherwise
-    While (search for word)
-      Check the word according to depth (verify first 2 or 3 letters)
-      It works
-    Increment depth by 1 (we are going one deeper now)
+Then we have a for loop which changes the word at each layer.
+  If we never find a word, it means that the word above us needs to change
+
+  If we find a word that works, we lock it in and move onto the next layer
+
+If one layer reaches the last word, it tells the layer above it to change its word. This gives us
+the depth-first search approach.
 =end
-currentDepth = 0
-while stringArray.size < $WORD_LENGTH
-  for depth in currentDepth...$WORD_LENGTH-1
-    validWordSquare = false
-    while !validWordSquare
-      nextWord = trieArray[depth].get_next_word()
+#binding.pry
+while changeWord[0] == false
+#puts wordSquare
+#puts
+  for i in 1...$WORD_LENGTH
+    while changeWord[i] == true
+      nextWord = trieArray[i].get_next_word()
       if nextWord == false
-        puts stringArray
-        puts
-        stringArray.pop
-        currentDepth = depth - 1
+        changeWord[i] = true
+        changeWord[i-1] = true
         break
       end
-      if nextWord == nil
-        puts "wtf"
-      end
-      stringArray.push(nextWord)
+      wordSquare[i] = nextWord.dup
 
-      validWordSquare = check_word_square(stringArray, dictionaryTrie)
-      if (!validWordSquare)
-        stringArray.pop
+      if (check_word_square(wordSquare, dictionaryTrie, i))
+        changeWord[i] = false
       end
     end
   end
-
-  while stringArray.size!= $WORD_LENGTH && stringArray.size > currentDepth+1
-    stringArray.pop
+  if changeWord[$WORD_LENGTH-1] == false
+    puts wordSquare
+    puts
   end
-
-  if currentDepth == -1
-    puts "No word square found"
-    break
-  end
+  # Hard code this so that the word square never thinks hes complete
+  changeWord[$WORD_LENGTH-1] = true
 end
+#binding.pry
+
+=begin
+
 
 for i in 0...$WORD_LENGTH
-  puts "#{stringArray[i]}"
+  puts "#{wordSquare[i]}"
 end
+=end
